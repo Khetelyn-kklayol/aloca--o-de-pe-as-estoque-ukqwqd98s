@@ -1,0 +1,195 @@
+{
+  "generatedAt": "2026-10-28T16:04:32.323Z",
+  "collections": [
+    {
+      "name": "users",
+      "type": "auth",
+      "apiRules": {
+        "list": "id = @request.auth.id",
+        "view": "id = @request.auth.id",
+        "create": "",
+        "update": "id = @request.auth.id",
+        "delete": "id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "avatar",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+      ]
+    },
+    {
+      "name": "posicoes",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && usuario = @request.auth.id",
+        "view": "@request.auth.id != '' && usuario = @request.auth.id",
+        "create": "@request.auth.id != '' && @request.body.usuario = @request.auth.id",
+        "update": "@request.auth.id != '' && usuario = @request.auth.id",
+        "delete": "@request.auth.id != '' && usuario = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "palete",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "posicao",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "nome_maquina",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "nome_peca",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "quantidade",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "usuario",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_posicoes_palete ON posicoes (palete)",
+        "CREATE INDEX idx_posicoes_posicao ON posicoes (posicao)",
+        "CREATE INDEX idx_posicoes_usuario ON posicoes (usuario)",
+        "CREATE INDEX idx_posicoes_created ON posicoes (created)",
+        "CREATE UNIQUE INDEX idx_posicoes_endereco_unique ON posicoes (palete, posicao)"
+      ]
+    },
+    {
+      "name": "movimentacoes",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && usuario = @request.auth.id",
+        "view": "@request.auth.id != '' && usuario = @request.auth.id",
+        "create": "@request.auth.id != '' && @request.body.usuario = @request.auth.id",
+        "update": "@request.auth.id != '' && usuario = @request.auth.id",
+        "delete": "@request.auth.id != '' && usuario = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "tipo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["alocacao", "edicao", "movimentacao", "exclusao"]
+        },
+        {
+          "name": "posicao_origem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "posicao_destino",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "nome_maquina",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "nome_peca",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "quantidade",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "usuario",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_movimentacoes_tipo ON movimentacoes (tipo)",
+        "CREATE INDEX idx_movimentacoes_usuario ON movimentacoes (usuario)",
+        "CREATE INDEX idx_movimentacoes_created ON movimentacoes (created)"
+      ]
+    }
+  ]
+}
