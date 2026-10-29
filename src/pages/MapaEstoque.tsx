@@ -1,60 +1,74 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MapPin, PackagePlus, Plus, Search } from 'lucide-react'
-import AllocationDrawer from '@/components/AllocationDrawer'
+import { Plus, Search } from 'lucide-react'
+import PosicaoDetalhesDrawer from '@/components/PosicaoDetalhesDrawer'
 import { useEstoque } from '@/contexts/EstoqueContext'
 import { cn } from '@/lib/utils'
-import type { Endereco, Posicao } from '@/types/estoque'
+import { ladosDaEstrutura, type Categoria, type Estrutura, type Posicao } from '@/types/estoque'
 
-const pallets = Array.from({ length: 4 }, (_, i) => `Palete ${i + 1}`)
-const slots = Array.from({ length: 8 }, (_, i) => `Posição ${i + 1}`)
+const LEGENDA: { categoria: Categoria | 'Confirmar'; label: string }[] = [
+  { categoria: 'Estoque', label: 'Estoque' },
+  { categoria: 'Máquina', label: 'Máquina' },
+  { categoria: 'Picking', label: 'Picking' },
+  { categoria: 'Vazio', label: 'Vazio' },
+  { categoria: 'Confirmar', label: 'Qtd a confirmar' },
+]
 
 export default function MapaEstoque() {
-  const { posicoes, carregando } = useEstoque()
+  const { estruturas, posicoes, itens, carregando } = useEstoque()
+  const [codigo, setCodigo] = useState<string>('')
   const [busca, setBusca] = useState('')
-  const [filtro, setFiltro] = useState('Todos')
-  const [drawer, setDrawer] = useState(false)
-  const [endereco, setEndereco] = useState<Endereco | null>(null)
-  const [registro, setRegistro] = useState<Posicao | null>(null)
-  const index = useMemo(
-    () => new Map(posicoes.map((p) => [`${p.palete}|${p.posicao}`, p])),
-    [posicoes],
+  const [alocarEm, setAlocarEm] = useState<Posicao | null>(null)
+  const [detalhesDe, setDetalhesDe] = useState<Posicao | null>(null)
+
+  const atual: Estrutura | undefined = estruturas.find((e) => e.codigo === codigo) || estruturas[0]
+
+  const posicoesDaEstrutura = useMemo(
+    () => (atual ? posicoes.filter((p) => p.estrutura === atual.id) : []),
+    [posicoes, atual],
   )
-  const searching = Boolean(busca.trim() || filtro !== 'Todos')
-  const matches = (item: Posicao | undefined, palete: string) => {
-    const byPalete = filtro === 'Todos' || filtro === palete
-    if (!item) return !busca.trim() && byPalete
-    const term = busca.toLocaleLowerCase('pt-BR').trim()
-    return (
-      byPalete &&
-      (!term || `${item.nome_maquina} ${item.nome_peca}`.toLocaleLowerCase('pt-BR').includes(term))
-    )
-  }
-  const open = (palete?: string, posicao?: string, item?: Posicao) => {
-    setRegistro(item || null)
-    setEndereco(
-      item
-        ? null
-        : {
-            palete: palete || 'Palete 1',
-            posicao: posicao || primeiraVazia()?.posicao || 'Posição 1',
-          },
-    )
-    setDrawer(true)
-  }
-  const primeiraVazia = () => {
-    for (const palete of pallets)
-      for (const posicao of slots)
-        if (!index.has(`${palete}|${posicao}`)) return { palete, posicao }
-    return null
-  }
+  const itensPorPosicao = useMemo(() => {
+    const mapa = new Map<string, number>()
+    for (const item of itens) mapa.set(item.posicao, (mapa.get(item.posicao) || 0) + 1)
+    return mapa
+  }, [itens])
+
+  const niveis = useMemo(
+    () => [...new Set(posicoesDaEstrutura.map((p) => p.nivel))].sort((a, b) => a - b),
+    [posicoesDaEstrutura],
+  )
+  const lados = useMemo(() => (atual ? ladosDaEstrutura(atual) : []), [atual])
+
+  const termo = busca.toLocaleLowerCase('pt-BR').trim()
+  const buscando = termo.length > 0
+  const enderecosQueCombinam = useMemo(() => {
+    if (!buscando) return null
+    const combinam = new Set<string>()
+    for (const item of itens) {
+      const pos = posicoes.find((p) => p.id === item.posicao)
+      if (!pos) continue
+      const texto = `${item.maquina} ${item.peca} ${item.codigo} ${pos.endereco}`.toLocaleLowerCase(
+        'pt-BR',
+      )
+      if (texto.includes(termo)) combinam.add(pos.endereco)
+    }
+    if (atual?.codigo && atual.codigo.toLocaleLowerCase('pt-BR').includes(termo)) {
+      for (const p of posicoesDaEstrutura) combinam.add(p.endereco)
+    }
+    return combinam
+  }, [buscando, termo, itens, posicoes, atual, posicoesDaEstrutura])
+
+  const primeiraVazia = () => posicoes.find((p) => p.categoria === 'Vazio') || null
+
   useEffect(() => {
     const listener = () => {
-      const empty = primeiraVazia()
-      if (empty) open(empty.palete, empty.posicao)
+      const vazia = primeiraVazia()
+      if (vazia) setAlocarEm(vazia)
     }
     window.addEventListener('nova-alocacao', listener)
     return () => window.removeEventListener('nova-alocacao', listener)
-  })
+  }, [posicoes])
+
+  const ocupadas = posicoesDaEstrutura.filter((p) => p.categoria !== 'Vazio').length
 
   return (
     <div className="page fade-in">
@@ -62,110 +76,126 @@ export default function MapaEstoque() {
         <div>
           <span className="eyebrow">VISÃO GERAL DO ESTOQUE</span>
           <h1>Mapa do Estoque</h1>
-          <p>Visualize e registre a posição de cada peça</p>
+          <p>
+            {atual
+              ? `${atual.nome} · ${ocupadas} de ${posicoesDaEstrutura.length} posições ocupadas`
+              : 'Visualize e registre a posição de cada peça'}
+          </p>
         </div>
         <button
           className="btn primary desktop-new"
           onClick={() => {
-            const e = primeiraVazia()
-            if (e) open(e.palete, e.posicao)
+            const vazia = primeiraVazia()
+            if (vazia) setAlocarEm(vazia)
           }}
         >
           <Plus /> Nova Alocação
         </button>
       </header>
+
+      <nav className="estrutura-tabs" aria-label="Estruturas do estoque">
+        {estruturas.map((e) => (
+          <button
+            key={e.id}
+            title={e.nome}
+            className={cn('estrutura-tab', atual?.id === e.id && 'active')}
+            onClick={() => setCodigo(e.codigo)}
+          >
+            {e.codigo}
+          </button>
+        ))}
+      </nav>
+
+      <div className="mapa-legend">
+        {LEGENDA.map((l) => (
+          <span key={l.label}>
+            <i
+              className={cn(
+                'legend-swatch',
+                `sw-${l.categoria === 'Confirmar' ? 'confirmar' : l.categoria}`,
+              )}
+            />
+            {l.label}
+          </span>
+        ))}
+      </div>
+
       <section className="filters">
         <label className="search-box">
           <Search />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por máquina, peça ou código..."
+            placeholder="Buscar por peça, máquina ou código..."
           />
         </label>
-        <select
-          className="field pallet-filter"
-          value={filtro}
-          onChange={(e) => setFiltro(e.target.value)}
-        >
-          <option>Todos</option>
-          {pallets.map((p) => (
-            <option key={p}>{p}</option>
-          ))}
-        </select>
       </section>
-      <div className="map-meta">
-        <span>
-          <span className="status-dot occupied" /> {posicoes.length} ocupadas
-        </span>
-        <span>
-          <span className="status-dot empty" /> {32 - posicoes.length} vazias
-        </span>
-      </div>
+      {buscando && enderecosQueCombinam && (
+        <p className="map-busca-info">
+          {enderecosQueCombinam.size
+            ? `${enderecosQueCombinam.size} posição(ões) correspondem à busca — destacadas no mapa.`
+            : 'Nenhuma posição corresponde à busca.'}
+        </p>
+      )}
+
       {carregando ? (
         <div className="loading-map">Carregando o mapa do estoque...</div>
       ) : (
-        <section className="pallet-grid">
-          {pallets.map((palete, palletIndex) => (
-            <article className="pallet-card" key={palete}>
-              <header>
-                <div>
-                  <span>PALLET {palletIndex + 1}</span>
-                  <small>
-                    {slots.filter((slot) => index.has(`${palete}|${slot}`)).length} de 8 posições
-                    ocupadas
-                  </small>
-                </div>
-                <PackagePlus />
-              </header>
-              <div className="slot-grid">
-                {slots.map((posicao, slotIndex) => {
-                  const item = index.get(`${palete}|${posicao}`)
-                  const matched = matches(item, palete)
-                  return (
-                    <button
-                      key={posicao}
-                      style={{ animationDelay: `${slotIndex * 40}ms` }}
-                      onClick={() => open(palete, posicao, item)}
-                      className={cn(
-                        'slot fade-up',
-                        item ? 'filled' : 'vacant',
-                        searching && (matched ? 'matched' : 'dimmed'),
-                      )}
-                    >
-                      <div className="slot-top">
-                        <strong>P{slotIndex + 1}</strong>
-                        {item ? (
-                          <>
-                            <span className="pin">
-                              <MapPin />
-                            </span>
-                            <span className="quantity-badge">{item.quantidade}</span>
-                          </>
-                        ) : null}
+        <section className="mapa-card">
+          {atual && (
+            <h2 className="mapa-titulo">
+              {atual.codigo} <small>{atual.nome}</small>
+            </h2>
+          )}
+          {niveis.map((nivel) => (
+            <div className="nivel-row" key={nivel}>
+              <span className="nivel-label">N{nivel}</span>
+              <div className="lados-col">
+                {lados
+                  .map((lado) => ({
+                    lado,
+                    celulas: posicoesDaEstrutura
+                      .filter((p) => p.nivel === nivel && p.lado === lado)
+                      .sort((a, b) => a.posicao - b.posicao),
+                  }))
+                  .filter(({ celulas }) => celulas.length > 0)
+                  .map(({ lado, celulas }) => (
+                    <div className="lado-row" key={lado}>
+                      <span className="lado-label">{lado}</span>
+                      <div className="celulas">
+                        {celulas.map((p) => {
+                          const qtdItens = itensPorPosicao.get(p.id) || 0
+                          const combina = enderecosQueCombinam?.has(p.endereco) || false
+                          return (
+                            <button
+                              key={p.id}
+                              title={`${p.endereco}${p.categoria !== 'Vazio' ? ` — ${qtdItens} item(ns)` : ''}`}
+                              className={cn(
+                                'celula',
+                                `cel-${p.categoria === 'Vazio' ? 'vazio' : p.categoria}`,
+                                p.categoria !== 'Vazio' && `cat-${p.categoria}`,
+                                buscando && (combina ? 'matched' : 'dimmed'),
+                              )}
+                              onClick={() =>
+                                p.categoria === 'Vazio' ? setAlocarEm(p) : setDetalhesDe(p)
+                              }
+                            >
+                              {p.categoria === 'Vazio' ? '' : p.posicao}
+                              {p.qtd_confirmar && <span className="celula-dot" />}
+                            </button>
+                          )
+                        })}
                       </div>
-                      {item ? (
-                        <>
-                          <span className="machine">{item.nome_maquina}</span>
-                          <span className="piece">{item.nome_peca}</span>
-                        </>
-                      ) : (
-                        <span className="empty-label">vazia</span>
-                      )}
-                    </button>
-                  )
-                })}
+                    </div>
+                  ))}
               </div>
-            </article>
+            </div>
           ))}
         </section>
       )}
-      <AllocationDrawer
-        open={drawer}
-        endereco={endereco}
-        registro={registro}
-        onClose={() => setDrawer(false)}
-      />
+
+      <PosicaoDetalhesDrawer posicao={alocarEm} alocar onClose={() => setAlocarEm(null)} />
+      <PosicaoDetalhesDrawer posicao={detalhesDe} onClose={() => setDetalhesDe(null)} />
     </div>
   )
 }

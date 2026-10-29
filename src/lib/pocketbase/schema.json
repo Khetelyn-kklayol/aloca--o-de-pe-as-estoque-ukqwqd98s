@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T16:04:32.323Z",
+  "generatedAt": "2026-10-29T18:55:19.243Z",
   "collections": [
     {
       "name": "users",
@@ -45,77 +45,6 @@
       ]
     },
     {
-      "name": "posicoes",
-      "type": "base",
-      "apiRules": {
-        "list": "@request.auth.id != '' && usuario = @request.auth.id",
-        "view": "@request.auth.id != '' && usuario = @request.auth.id",
-        "create": "@request.auth.id != '' && @request.body.usuario = @request.auth.id",
-        "update": "@request.auth.id != '' && usuario = @request.auth.id",
-        "delete": "@request.auth.id != '' && usuario = @request.auth.id"
-      },
-      "fields": [
-        {
-          "name": "palete",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "posicao",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "nome_maquina",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "nome_peca",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "quantidade",
-          "type": "number",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "usuario",
-          "type": "relation",
-          "required": true,
-          "system": false,
-          "collectionRef": "users"
-        },
-        {
-          "name": "created",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate"]
-        },
-        {
-          "name": "updated",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
-        }
-      ],
-      "indexes": [
-        "CREATE INDEX idx_posicoes_palete ON posicoes (palete)",
-        "CREATE INDEX idx_posicoes_posicao ON posicoes (posicao)",
-        "CREATE INDEX idx_posicoes_usuario ON posicoes (usuario)",
-        "CREATE INDEX idx_posicoes_created ON posicoes (created)",
-        "CREATE UNIQUE INDEX idx_posicoes_endereco_unique ON posicoes (palete, posicao)"
-      ]
-    },
-    {
       "name": "movimentacoes",
       "type": "base",
       "apiRules": {
@@ -148,7 +77,7 @@
         {
           "name": "nome_maquina",
           "type": "text",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
@@ -160,7 +89,7 @@
         {
           "name": "quantidade",
           "type": "number",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
@@ -183,12 +112,228 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "codigo_peca",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_movimentacoes_tipo ON movimentacoes (tipo)",
         "CREATE INDEX idx_movimentacoes_usuario ON movimentacoes (usuario)",
         "CREATE INDEX idx_movimentacoes_created ON movimentacoes (created)"
+      ]
+    },
+    {
+      "name": "estruturas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "codigo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "lados",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ordem",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_estruturas_codigo ON estruturas (codigo)"]
+    },
+    {
+      "name": "posicoes",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "endereco",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "estrutura",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "estruturas"
+        },
+        {
+          "name": "nivel",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "lado",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "posicao",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "tamanho",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "categoria",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Estoque", "Máquina", "Picking", "Vazio"]
+        },
+        {
+          "name": "qtd_confirmar",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_posicoes_endereco ON posicoes (endereco)",
+        "CREATE INDEX idx_posicoes_estrutura ON posicoes (estrutura)",
+        "CREATE INDEX idx_posicoes_nivel ON posicoes (estrutura, nivel, lado, posicao)"
+      ]
+    },
+    {
+      "name": "itens",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "posicao",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "posicoes"
+        },
+        {
+          "name": "categoria",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Estoque", "Máquina", "Picking"]
+        },
+        {
+          "name": "maquina",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "peca",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "codigo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantidade",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "qtd_confirmar",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_itens_posicao ON itens (posicao)",
+        "CREATE INDEX idx_itens_peca ON itens (peca)",
+        "CREATE INDEX idx_itens_codigo ON itens (codigo)"
       ]
     }
   ]
