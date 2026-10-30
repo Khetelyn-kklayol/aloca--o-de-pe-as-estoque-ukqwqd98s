@@ -1,6 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useEstoque } from '@/contexts/EstoqueContext'
-import type { GrupoInventario, ItemInventario, SnapshotInventario } from '@/types/estoque'
+import type {
+  GrupoInventario,
+  ItemInventario,
+  LinhaCodigo,
+  SnapshotInventario,
+} from '@/types/estoque'
 import type { LinhaInventario } from '@/lib/export-csv'
 
 /** Máquina de exibição para itens sem máquina digitada. */
@@ -14,26 +19,63 @@ const qtdDe = (i: ItemInventario) =>
 const valorDe = (i: ItemInventario) => (i.precoCusto != null ? qtdDe(i) * i.precoCusto : 0)
 
 const precoCsv = (p: number | null) => (p == null ? '—' : p.toFixed(2).replace('.', ','))
-const valorCsv = (v: number) => (v ? v.toFixed(2).replace('.', ',') : '—')
+const valorCsv = (v: number | null) => (v ? v.toFixed(2).replace('.', ',') : '—')
 
-/** Linhas planas na ordem dos grupos — base do CSV e da lista. */
-export function linhasInventario(
-  itens: ItemInventario[],
-): { linha: LinhaInventario; maquina: string }[] {
-  return itens.map((i) => ({
-    linha: {
-      Estrutura: i.estrutura,
-      Endereço: i.endereco,
-      Máquina: rotuloMaquina(i.maquina),
-      Peça: i.peca,
-      Código: i.codigo,
-      Quantidade:
-        i.quantidade && i.quantidade > 0 && !i.qtdConfirmar ? String(i.quantidade) : 'a confirmar',
-      'Preço de custo': precoCsv(i.precoCusto),
-      'Valor total': valorCsv(valorDe(i)),
-    },
-    maquina: rotuloMaquina(i.maquina),
-  }))
+/** Texto da quantidade agregada: soma confirmada + nota de pendências. */
+export function qtdAgregadaTexto(l: Pick<LinhaCodigo, 'quantidade' | 'pendentes'>) {
+  if (l.quantidade > 0)
+    return l.pendentes > 0 ? `${l.quantidade} (+${l.pendentes} a conf.)` : String(l.quantidade)
+  return l.pendentes > 0 ? 'a confirmar' : '0'
+}
+
+/** Agrega linhas de item por código — mesmo código na mesma máquina = uma linha. */
+export function agregarPorCodigo(
+  itens: Pick<ItemInventario, 'codigo' | 'quantidade' | 'qtdConfirmar' | 'precoCusto'>[],
+): LinhaCodigo[] {
+  const ordem: string[] = []
+  const porCodigo = new Map<string, LinhaCodigo>()
+  for (const i of itens) {
+    const chave = i.codigo.trim().toLocaleLowerCase('pt-BR')
+    const rotulo = i.codigo.trim()
+    let l = porCodigo.get(chave)
+    if (!l) {
+      l = { codigo: rotulo, quantidade: 0, pendentes: 0, precoCusto: null, valorTotal: null }
+      porCodigo.set(chave, l)
+      ordem.push(chave)
+    } else if (rotulo && !l.codigo) {
+      l.codigo = rotulo
+    }
+    if (i.qtdConfirmar || !i.quantidade || i.quantidade <= 0) l.pendentes += 1
+    else l.quantidade += i.quantidade
+    if (l.precoCusto == null && i.precoCusto != null) l.precoCusto = i.precoCusto
+  }
+  return ordem.map((k) => {
+    const l = porCodigo.get(k)!
+    l.valorTotal = l.precoCusto != null && l.quantidade > 0 ? l.quantidade * l.precoCusto : null
+    return l
+  })
+}
+
+/**
+ * Linhas de um grupo: snapshots v2 já gravam a lista agregada ("lista");
+ * snapshots v1 agregam na hora a partir dos itens individuais.
+ */
+export function linhasDoGrupo(g: GrupoInventario): LinhaCodigo[] {
+  if (g.lista && g.lista.length > 0) return g.lista.map((l) => ({ ...l }))
+  return agregarPorCodigo(g.itens || [])
+}
+
+/** Linhas planas (uma por código/máquina) na ordem dos grupos — base do CSV. */
+export function linhasCsv(grupos: GrupoInventario[]): LinhaInventario[] {
+  return grupos.flatMap((g) =>
+    linhasDoGrupo(g).map((l) => ({
+      Modelo: g.maquina,
+      Código: l.codigo || '—',
+      Quantidade: qtdAgregadaTexto(l),
+      'Preço de custo': precoCsv(l.precoCusto),
+      'Valor total': valorCsv(l.valorTotal),
+    })),
+  )
 }
 
 /** Agrupa os itens por modelo de máquina (valor exato digitado), com contagens e valores. */
@@ -122,9 +164,14 @@ export function useInventario() {
     [grupos],
   )
 
-  /** Snapshot agregado para gravar no histórico mensal. */
+  /**
+   * Snapshot v2 para gravar no histórico mensal: totais + a LISTA de itens por
+   * máquina agregada por código (modelo, código — futuro SKU do Bling —,
+   * quantidade e preço de custo). Regravar o mês substitui o registro inteiro.
+   */
   const snapshot = useCallback(
     (): SnapshotInventario => ({
+      versao: 2,
       total,
       totalQuantidade,
       totalValores,
@@ -133,29 +180,8 @@ export function useInventario() {
         totalItens: g.totalItens,
         somaQuantidades: g.somaQuantidades,
         somaValores: g.somaValores,
-        itens: g.itens.map(
-          ({
-            id,
-            estrutura,
-            endereco,
-            maquina,
-            peca,
-            codigo,
-            quantidade,
-            qtdConfirmar,
-            precoCusto,
-          }) => ({
-            id,
-            estrutura,
-            endereco,
-            maquina,
-            peca,
-            codigo,
-            quantidade,
-            qtdConfirmar,
-            precoCusto,
-          }),
-        ),
+        itens: [],
+        lista: agregarPorCodigo(g.itens),
       })),
     }),
     [total, totalQuantidade, totalValores, grupos],

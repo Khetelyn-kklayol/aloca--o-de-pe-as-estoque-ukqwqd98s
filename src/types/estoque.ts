@@ -69,9 +69,25 @@ export interface GrupoInventario {
   somaQuantidades: number
   somaValores: number
   itens: ItemInventario[]
+  /** v2 do snapshot: itens agregados por código (modelo + código = SKU Bling). */
+  lista?: LinhaCodigo[]
+}
+
+/** Linha do inventário agregada por código — mesmo código = uma linha, qtd somada. */
+export interface LinhaCodigo {
+  codigo: string
+  /** Quantidade confirmada (linhas "a confirmar" não somam). */
+  quantidade: number
+  /** Quantas linhas deste código estão com quantidade "a confirmar". */
+  pendentes: number
+  precoCusto: number | null
+  /** quantidade × precoCusto, quando há quantidade confirmada e preço. */
+  valorTotal: number | null
 }
 
 export interface SnapshotInventario {
+  /** 2 = grupos com lista agregada por código; ausente/1 = itens individuais (v1). */
+  versao?: number
   total: number
   totalQuantidade: number
   /** Preço total em estoque no momento do snapshot (soma geral). */

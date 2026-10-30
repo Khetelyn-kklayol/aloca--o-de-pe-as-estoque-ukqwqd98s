@@ -1598,6 +1598,10 @@ p {
     0 1px 1px #1c1b1826,
     inset 0 0 0 1px #1c1b1810;
 }
+.caixa-extras {
+  font-weight: 800;
+  color: #1c1b18;
+}
 .caixa:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 18px -9px #1c1b1788;
@@ -1835,9 +1839,9 @@ p {
   font-weight: 400;
   color: var(--muted);
 }
-.inv-mes-grupos {
+.inv-mes-listas {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
@@ -1848,12 +1852,58 @@ p {
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+.inv-mes-grupo header {
+  display: flex;
+  flex-direction: column;
   gap: 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
 }
 .inv-mes-grupo strong {
   font-size: 13px;
 }
-.inv-mes-grupo span {
+.inv-mes-grupo header span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.inv-mes-itens {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.inv-mes-itens li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px dashed #e7e4dc;
+  font-size: 12.5px;
+}
+.inv-mes-itens li:last-child {
+  border-bottom: 0;
+}
+.inv-mes-codigo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.inv-mes-qtd,
+.inv-mes-preco {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.inv-mes-qtd {
+  color: var(--muted);
+}
+.inv-mes-vazio {
   font-size: 12px;
   color: var(--muted);
 }
@@ -1902,7 +1952,7 @@ p {
   }
 }
 
-/* ===== Níveis porta-palete em grades 3×3 (formato do estoque físico) ===== */
+/* ===== Níveis dos PGs em grades 3×3 numeradas (formato do estoque físico) ===== */
 .grade-lados {
   display: flex;
   gap: 26px;
@@ -1929,25 +1979,21 @@ p {
   letter-spacing: 0.4px;
   color: var(--muted);
 }
-.grade-vazia-baixo,
-.grade-vazia-cima,
-.grade-vazia-meio {
-  border-color: rgba(28, 27, 24, 0.14);
-}
-.grade-vazia-baixo {
-  background: #fdf3d9;
-}
-.grade-vazia-cima {
-  background: #e6f1e2;
-}
-.grade-vazia-meio {
-  background: #f0efeb;
+.grade-vazia {
+  border: 1px dashed #cfccc3;
+  background: transparent;
+  color: #b3b0a7;
 }
 .grade-celula {
+  position: relative;
+  min-width: 0;
   height: 46px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1px;
+  padding: 3px 2px;
   font-size: 12.5px;
   font-weight: 700;
   color: #4a4a44;
@@ -1957,11 +2003,7 @@ p {
     transform 0.12s ease,
     box-shadow 0.12s ease;
 }
-.grade-vazia-baixo,
-.grade-vazia-cima,
-.grade-vazia-meio {
-  position: relative;
-}
+
 .grade-celula:hover {
   transform: translateY(-1px);
 }
@@ -1969,6 +2011,8 @@ p {
   position: relative;
   overflow: hidden;
   color: #3f3a24;
+  background: #e4e2da;
+  border-color: #b3afa2;
   box-shadow: 0 2px 0 rgba(28, 27, 24, 0.14);
 }
 .grade-caixa .caixa-topo {
@@ -1980,17 +2024,51 @@ p {
   background: rgba(255, 255, 255, 0.42);
   border-bottom: 1px solid rgba(28, 27, 24, 0.1);
 }
-.grade-caixa-baixo {
-  background: linear-gradient(180deg, #f7df9d 0%, #eec964 100%);
-  border-color: #dcb84e;
+/* Tons por categoria — os mesmos do mapa (sem esquema amarelo/verde por lado). */
+.grade-caixa-Estoque {
+  background: linear-gradient(180deg, #c99e63 0%, #b3814b 100%);
+  border-color: #9c6f3e;
 }
-.grade-caixa-cima {
-  background: linear-gradient(180deg, #c2ddb2 0%, #9cc687 100%);
-  border-color: #83b06e;
+.grade-caixa-Picking {
+  background: linear-gradient(180deg, #e6d3ab 0%, #d2b787 100%);
+  border-color: #bf9f6a;
 }
-.grade-caixa-meio {
-  background: linear-gradient(180deg, #e4e2da 0%, #cfccc1 100%);
-  border-color: #b3afa2;
+.grade-caixa-Máquina {
+  background: linear-gradient(180deg, #bcb9b1 0%, #a5a199 100%);
+  border-color: #8f8b81;
+}
+.grade-num {
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.72;
+}
+.grade-rotulo {
+  max-width: 94%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 7.5px;
+  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #fbf8f0;
+  color: #4c4234;
+  box-shadow: inset 0 0 0 1px #1c1b1810;
+}
+.grade-extras {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  z-index: 1;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.6;
+  padding: 0 4px;
+  border-radius: 7px;
+  background: #1c1b18;
+  color: #f7f3ea;
 }
 .grade-celula.matched {
   outline: 2px solid var(--gold);

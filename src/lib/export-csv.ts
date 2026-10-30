@@ -1,26 +1,14 @@
 /** Geração e download de CSV com separador ';' e BOM (Excel BR). */
 
 export interface LinhaInventario {
-  Estrutura: string
-  Endereço: string
-  Máquina: string
-  Peça: string
+  Modelo: string
   Código: string
   Quantidade: string
   'Preço de custo': string
   'Valor total': string
 }
 
-const CAB = [
-  'Estrutura',
-  'Endereço',
-  'Máquina',
-  'Peça',
-  'Código',
-  'Quantidade',
-  'Preço de custo',
-  'Valor total',
-]
+const CAB = ['Modelo', 'Código', 'Quantidade', 'Preço de custo', 'Valor total']
 
 const esc = (v: string) => {
   const t = (v ?? '').toString()

@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/accordion'
 import { useToast } from '@/hooks/use-toast'
 import { useEstoque } from '@/contexts/EstoqueContext'
-import { linhasInventario, useInventario } from '@/hooks/use-inventario'
+import { linhasCsv, linhasDoGrupo, useInventario } from '@/hooks/use-inventario'
 import { baixarCsv, type LinhaInventario } from '@/lib/export-csv'
 import { listarInventarios, registrarInventarioDoMes } from '@/services/inventarios'
 import { precoTexto, type Inventario } from '@/types/estoque'
@@ -18,10 +18,8 @@ const nomeMes = (mes: string) => {
   return new Date(ano, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 }
 
-const csvDoSnapshot = (inv: Inventario): LinhaInventario[] => {
-  const itens = (inv.snapshot?.grupos || []).flatMap((g) => g.itens)
-  return linhasInventario(itens).map(({ linha }) => linha)
-}
+/** Linhas do snapshot gravado — v2 usa a lista agregada, v1 agrega na hora. */
+const linhasDoMes = (inv: Inventario): LinhaInventario[] => linhasCsv(inv.snapshot?.grupos || [])
 
 /** Seção do histórico mensal: grava o snapshot do mês e lista os meses salvos. */
 export default function HistoricoMensal() {
@@ -65,8 +63,8 @@ export default function HistoricoMensal() {
         <div>
           <h2>Histórico mensal</h2>
           <p>
-            Snapshots gravados mês a mês — regravar o mês atual atualiza o registro, meses
-            anteriores são preservados.
+            Snapshots gravados mês a mês com a lista de itens (código, quantidade e preço) por
+            modelo — regravar o mês atual atualiza o registro, meses anteriores são preservados.
           </p>
         </div>
         <button className="btn primary" disabled={registrando} onClick={registrar}>
@@ -96,20 +94,46 @@ export default function HistoricoMensal() {
                 </span>
               </AccordionTrigger>
               <AccordionContent>
-                <div className="inv-mes-grupos">
-                  {(inv.snapshot?.grupos || []).map((g) => (
-                    <div className="inv-mes-grupo" key={g.maquina}>
-                      <strong>{g.maquina}</strong>
-                      <span>
-                        {g.totalItens} item(ns) · {g.somaQuantidades} un.
-                        {g.somaValores ? ` · ${precoTexto(g.somaValores)}` : ''}
-                      </span>
-                    </div>
-                  ))}
+                <div className="inv-mes-listas">
+                  {(inv.snapshot?.grupos || []).map((g) => {
+                    const linhas = linhasDoGrupo(g)
+                    return (
+                      <div className="inv-mes-grupo" key={g.maquina}>
+                        <header>
+                          <strong>{g.maquina}</strong>
+                          <span>
+                            {g.totalItens} item(ns) · {g.somaQuantidades} un.
+                            {g.somaValores ? ` · ${precoTexto(g.somaValores)}` : ''}
+                          </span>
+                        </header>
+                        {linhas.length === 0 ? (
+                          <span className="inv-mes-vazio">Nenhum item neste modelo.</span>
+                        ) : (
+                          <ul className="inv-mes-itens">
+                            {linhas.map((l, idx) => (
+                              <li key={`${l.codigo}-${idx}`}>
+                                <span className="inv-mes-codigo">{l.codigo || '—'}</span>
+                                <span className="inv-mes-qtd">
+                                  {l.quantidade > 0
+                                    ? l.pendentes > 0
+                                      ? `${l.quantidade} (+${l.pendentes} a conf.)`
+                                      : `${l.quantidade} un.`
+                                    : 'a confirmar'}
+                                </span>
+                                <span className="inv-mes-preco">
+                                  {l.precoCusto != null ? precoTexto(l.precoCusto) : '—'}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
                 <button
                   className="btn secondary"
-                  onClick={() => baixarCsv(`inventario-${inv.mes}.csv`, csvDoSnapshot(inv))}
+                  onClick={() => baixarCsv(`inventario-${inv.mes}.csv`, linhasDoMes(inv))}
                 >
                   <Download /> Baixar CSV deste mês
                 </button>

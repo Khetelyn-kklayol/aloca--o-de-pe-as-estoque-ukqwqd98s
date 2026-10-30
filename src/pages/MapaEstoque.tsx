@@ -4,7 +4,14 @@ import GradeNivel from '@/components/GradePortaPaletes'
 import PosicaoDetalhesDrawer from '@/components/PosicaoDetalhesDrawer'
 import { useEstoque } from '@/contexts/EstoqueContext'
 import { cn } from '@/lib/utils'
-import { ladosDaEstrutura, type Categoria, type Estrutura, type Posicao } from '@/types/estoque'
+import {
+  ladosDaEstrutura,
+  type Categoria,
+  type Estrutura,
+  type Item,
+  type Posicao,
+} from '@/types/estoque'
+import { rotuloFace } from '@/components/GradePortaPaletes'
 
 const LEGENDA: { categoria: Categoria | 'Confirmar'; label: string }[] = [
   { categoria: 'Estoque', label: 'Estoque' },
@@ -16,9 +23,8 @@ const LEGENDA: { categoria: Categoria | 'Confirmar'; label: string }[] = [
 
 export default function MapaEstoque() {
   const { estruturas, posicoes, itens, carregando } = useEstoque()
-  // Estruturas porta-palete com lados Baixo/Cima usam as grades 3×3 do estoque físico.
-  const emGrade = (e: Estrutura | undefined) =>
-    !!e && ['PG1', 'PG2', 'PG3', 'PP1', 'PP2'].includes(e.codigo)
+  // Apenas os PGs seguem o formato do estoque físico (grades 3×3 numeradas).
+  const emGrade = (e: Estrutura | undefined) => !!e && ['PG1', 'PG2', 'PG3'].includes(e.codigo)
   const [codigo, setCodigo] = useState<string>('')
   const [busca, setBusca] = useState('')
   const [alocarEm, setAlocarEm] = useState<Posicao | null>(null)
@@ -33,6 +39,15 @@ export default function MapaEstoque() {
   const itensPorPosicao = useMemo(() => {
     const mapa = new Map<string, number>()
     for (const item of itens) mapa.set(item.posicao, (mapa.get(item.posicao) || 0) + 1)
+    return mapa
+  }, [itens])
+  const itensAgrupados = useMemo(() => {
+    const mapa = new Map<string, Item[]>()
+    for (const item of itens) {
+      const lista = mapa.get(item.posicao) || []
+      lista.push(item)
+      mapa.set(item.posicao, lista)
+    }
     return mapa
   }, [itens])
 
@@ -163,7 +178,7 @@ export default function MapaEstoque() {
                       <GradeNivel
                         lados={lados}
                         posicoesDoNivel={posicoesDaEstrutura.filter((p) => p.nivel === nivel)}
-                        itensPorPosicao={itensPorPosicao}
+                        itensDaPosicao={itensAgrupados}
                         buscando={buscando}
                         enderecosQueCombinam={enderecosQueCombinam}
                         onAlocar={setAlocarEm}
@@ -215,7 +230,15 @@ export default function MapaEstoque() {
                                       <span className="caixa-topo" aria-hidden />
                                       <span className="caixa-lado" aria-hidden />
                                       <span className="caixa-fita" aria-hidden />
-                                      <span className="caixa-etiqueta">{p.endereco}</span>
+                                      <span className="caixa-etiqueta">
+                                        {rotuloFace(itensAgrupados.get(p.id) || []) || p.endereco}
+                                        {(itensAgrupados.get(p.id) || []).length > 1 && (
+                                          <b className="caixa-extras">
+                                            {' '}
+                                            +{(itensAgrupados.get(p.id) || []).length - 1}
+                                          </b>
+                                        )}
+                                      </span>
                                       {p.qtd_confirmar && <span className="caixa-alerta" />}
                                     </button>
                                   )
