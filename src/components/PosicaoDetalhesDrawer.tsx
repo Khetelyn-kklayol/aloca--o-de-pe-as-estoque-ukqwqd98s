@@ -13,7 +13,12 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { useEstoque } from '@/contexts/EstoqueContext'
 import ItemForm from '@/components/ItemForm'
-import { excluirItem, sincronizarPosicao, moverItem as moverItemSvc } from '@/services/itens'
+import {
+  aplicarGravidade,
+  excluirItem,
+  sincronizarPosicao,
+  moverItem as moverItemSvc,
+} from '@/services/itens'
 import { registrarMovimentacao } from '@/services/movimentacoes'
 import { qtdTexto, type Item, type Posicao } from '@/types/estoque'
 
@@ -66,10 +71,14 @@ export default function PosicaoDetalhesDrawer({ posicao, onClose, alocar }: Prop
         codigo: item.codigo,
         quantidade: item.quantidade,
       })
+      // Regra de gravidade nos porta-paletes: a pilha de cima desce em cascata.
+      const resultado = await aplicarGravidade(posicao)
       await recarregar()
       toast({
         title: 'Item excluído',
-        description: `${item.peca} removido de ${posicao.endereco}.`,
+        description: resultado.quedas.length
+          ? `${item.peca} removido de ${posicao.endereco}. ${resultado.quedas.length} caixa(s) desceu(aram) por gravidade.`
+          : `${item.peca} removido de ${posicao.endereco}.`,
         className: 'toast-success',
       })
     } catch {
@@ -101,10 +110,14 @@ export default function PosicaoDetalhesDrawer({ posicao, onClose, alocar }: Prop
         codigo: item.codigo,
         quantidade: item.quantidade,
       })
+      // Gravidade: se a origem ficou vazia, a pilha de cima desce em cascata.
+      const resultado = await aplicarGravidade(posicao)
       await recarregar()
       toast({
         title: 'Item movido',
-        description: `${item.peca}: ${posicao.endereco} → ${alvo.endereco}.`,
+        description: resultado.quedas.length
+          ? `${item.peca}: ${posicao.endereco} → ${alvo.endereco}. ${resultado.quedas.length} caixa(s) desceu(aram) por gravidade.`
+          : `${item.peca}: ${posicao.endereco} → ${alvo.endereco}.`,
         className: 'toast-success',
       })
       setItemMovendo(null)

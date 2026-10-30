@@ -9,6 +9,7 @@ export interface MovimentacaoInput {
   peca: string
   codigo?: string
   quantidade?: number | null
+  observacao?: string
 }
 
 export const listarMovimentacoes = () =>
@@ -23,6 +24,7 @@ export function registrarMovimentacao(data: MovimentacaoInput) {
     nome_peca: data.peca,
     codigo_peca: data.codigo || '',
     quantidade: data.quantidade ?? 0,
+    observacao: data.observacao || '',
     usuario: pb.authStore.record?.id,
   })
 }

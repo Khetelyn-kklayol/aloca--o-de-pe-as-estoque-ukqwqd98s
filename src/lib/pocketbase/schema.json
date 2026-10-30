@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-29T18:55:19.243Z",
+  "generatedAt": "2026-10-30T00:43:58.524Z",
   "collections": [
     {
       "name": "users",
@@ -115,6 +115,12 @@
         },
         {
           "name": "codigo_peca",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observacao",
           "type": "text",
           "required": false,
           "system": false
@@ -335,6 +341,59 @@
         "CREATE INDEX idx_itens_peca ON itens (peca)",
         "CREATE INDEX idx_itens_codigo ON itens (codigo)"
       ]
+    },
+    {
+      "name": "inventarios",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "mes",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "total",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "snapshot",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "usuario",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_inventarios_mes ON inventarios (mes)"]
     }
   ]
 }

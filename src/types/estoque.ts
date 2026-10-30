@@ -45,8 +45,42 @@ export interface Movimentacao extends RecordModel {
   nome_peca: string
   codigo_peca?: string
   quantidade: number
+  observacao?: string
   usuario: string
   created: string
+}
+
+export interface GrupoInventario {
+  maquina: string
+  totalItens: number
+  somaQuantidades: number
+  itens: ItemInventario[]
+}
+
+export interface ItemInventario {
+  id: string
+  estrutura: string
+  endereco: string
+  maquina: string
+  peca: string
+  codigo: string
+  quantidade: number | null
+  qtdConfirmar: boolean
+}
+
+export interface SnapshotInventario {
+  total: number
+  totalQuantidade: number
+  grupos: GrupoInventario[]
+}
+
+export interface Inventario extends RecordModel {
+  mes: string // AAAA-MM
+  total: number
+  snapshot: SnapshotInventario | null // json field
+  usuario: string
+  created: string
+  updated: string
 }
 
 /** Lados json: PocketBase pode devolver string ou array. */

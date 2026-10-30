@@ -9,6 +9,7 @@ import ResetarSenha from '@/pages/ResetarSenha'
 import ConfirmarEmail from '@/pages/ConfirmarEmail'
 import MapaEstoque from '@/pages/MapaEstoque'
 import Historico from '@/pages/Historico'
+import Inventario from '@/pages/Inventario'
 import NotFound from '@/pages/NotFound'
 
 function Entrada() {
@@ -52,6 +53,7 @@ export default function App() {
           <Route element={<Protegida />}>
             <Route path="/mapa" element={<MapaEstoque />} />
             <Route path="/historico" element={<Historico />} />
+            <Route path="/inventario" element={<Inventario />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

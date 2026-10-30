@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Clock3, LogOut, Menu, PackageOpen, Plus, X } from 'lucide-react'
+import { Boxes, Clock3, LogOut, Menu, PackageOpen, Plus, X } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
@@ -45,6 +45,15 @@ export default function Layout({ children }: { children: ReactNode }) {
         >
           <PackageOpen />
           <span>Mapa do Estoque</span>
+        </NavLink>
+        <NavLink
+          to="/inventario"
+          onClick={() => setMenu(false)}
+          className={({ isActive }) => cn('nav-item', isActive && 'active')}
+          title="Inventário"
+        >
+          <Boxes />
+          <span>Inventário</span>
         </NavLink>
         <NavLink
           to="/historico"
