@@ -20,7 +20,7 @@ import {
   moverItem as moverItemSvc,
 } from '@/services/itens'
 import { registrarMovimentacao } from '@/services/movimentacoes'
-import { qtdTexto, type Item, type Posicao } from '@/types/estoque'
+import { precoTexto, qtdTexto, type Item, type Posicao } from '@/types/estoque'
 
 interface Props {
   posicao: Posicao | null
@@ -229,7 +229,8 @@ export default function PosicaoDetalhesDrawer({ posicao, onClose, alocar }: Prop
                   </div>
                   <p className="item-meta">
                     {item.maquina ? `${item.maquina} · ` : ''}
-                    {item.codigo || 'sem código'} · {item.categoria}
+                    {item.codigo || 'sem código'} · {item.categoria} ·{' '}
+                    {precoTexto(item.preco_custo ?? null)}
                   </p>
                   <div className="item-actions">
                     <button

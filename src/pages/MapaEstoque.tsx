@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
+import GradeNivel from '@/components/GradePortaPaletes'
 import PosicaoDetalhesDrawer from '@/components/PosicaoDetalhesDrawer'
 import { useEstoque } from '@/contexts/EstoqueContext'
 import { cn } from '@/lib/utils'
@@ -15,6 +16,9 @@ const LEGENDA: { categoria: Categoria | 'Confirmar'; label: string }[] = [
 
 export default function MapaEstoque() {
   const { estruturas, posicoes, itens, carregando } = useEstoque()
+  // Estruturas porta-palete com lados Baixo/Cima usam as grades 3×3 do estoque físico.
+  const emGrade = (e: Estrutura | undefined) =>
+    !!e && ['PG1', 'PG2', 'PG3', 'PP1', 'PP2'].includes(e.codigo)
   const [codigo, setCodigo] = useState<string>('')
   const [busca, setBusca] = useState('')
   const [alocarEm, setAlocarEm] = useState<Posicao | null>(null)
@@ -155,60 +159,72 @@ export default function MapaEstoque() {
                 <div className="rack-nivel" key={nivel}>
                   <div className="rack-nivel-conteudo">
                     <span className="rack-nivel-label">N{nivel}</span>
-                    <div className="rack-lados">
-                      {lados
-                        .map((lado) => ({
-                          lado,
-                          celulas: posicoesDaEstrutura
-                            .filter((p) => p.nivel === nivel && p.lado === lado)
-                            .sort((a, b) => a.posicao - b.posicao),
-                        }))
-                        .filter(({ celulas }) => celulas.length > 0)
-                        .map(({ lado, celulas }) => (
-                          <div className="rack-lado" key={lado}>
-                            <span className="rack-lado-label">{lado}</span>
-                            <div className="rack-slots">
-                              {celulas.map((p) => {
-                                const qtdItens = itensPorPosicao.get(p.id) || 0
-                                const combina = enderecosQueCombinam?.has(p.endereco) || false
-                                if (p.categoria === 'Vazio')
+                    {emGrade(atual) ? (
+                      <GradeNivel
+                        lados={lados}
+                        posicoesDoNivel={posicoesDaEstrutura.filter((p) => p.nivel === nivel)}
+                        itensPorPosicao={itensPorPosicao}
+                        buscando={buscando}
+                        enderecosQueCombinam={enderecosQueCombinam}
+                        onAlocar={setAlocarEm}
+                        onDetalhes={setDetalhesDe}
+                      />
+                    ) : (
+                      <div className="rack-lados">
+                        {lados
+                          .map((lado) => ({
+                            lado,
+                            celulas: posicoesDaEstrutura
+                              .filter((p) => p.nivel === nivel && p.lado === lado)
+                              .sort((a, b) => a.posicao - b.posicao),
+                          }))
+                          .filter(({ celulas }) => celulas.length > 0)
+                          .map(({ lado, celulas }) => (
+                            <div className="rack-lado" key={lado}>
+                              <span className="rack-lado-label">{lado}</span>
+                              <div className="rack-slots">
+                                {celulas.map((p) => {
+                                  const qtdItens = itensPorPosicao.get(p.id) || 0
+                                  const combina = enderecosQueCombinam?.has(p.endereco) || false
+                                  if (p.categoria === 'Vazio')
+                                    return (
+                                      <button
+                                        key={p.id}
+                                        title={`${p.endereco} — posição vazia`}
+                                        className={cn(
+                                          'slot-vazio',
+                                          buscando && (combina ? 'matched' : 'dimmed'),
+                                        )}
+                                        onClick={() => setAlocarEm(p)}
+                                      >
+                                        {p.posicao}
+                                      </button>
+                                    )
                                   return (
                                     <button
                                       key={p.id}
-                                      title={`${p.endereco} — posição vazia`}
+                                      title={`${p.endereco} — ${qtdItens} item(ns)`}
                                       className={cn(
-                                        'slot-vazio',
+                                        'caixa',
+                                        `caixa-${p.categoria}`,
+                                        p.qtd_confirmar && 'caixa-confirmar',
                                         buscando && (combina ? 'matched' : 'dimmed'),
                                       )}
-                                      onClick={() => setAlocarEm(p)}
+                                      onClick={() => setDetalhesDe(p)}
                                     >
-                                      {p.posicao}
+                                      <span className="caixa-topo" aria-hidden />
+                                      <span className="caixa-lado" aria-hidden />
+                                      <span className="caixa-fita" aria-hidden />
+                                      <span className="caixa-etiqueta">{p.endereco}</span>
+                                      {p.qtd_confirmar && <span className="caixa-alerta" />}
                                     </button>
                                   )
-                                return (
-                                  <button
-                                    key={p.id}
-                                    title={`${p.endereco} — ${qtdItens} item(ns)`}
-                                    className={cn(
-                                      'caixa',
-                                      `caixa-${p.categoria}`,
-                                      p.qtd_confirmar && 'caixa-confirmar',
-                                      buscando && (combina ? 'matched' : 'dimmed'),
-                                    )}
-                                    onClick={() => setDetalhesDe(p)}
-                                  >
-                                    <span className="caixa-topo" aria-hidden />
-                                    <span className="caixa-lado" aria-hidden />
-                                    <span className="caixa-fita" aria-hidden />
-                                    <span className="caixa-etiqueta">{p.endereco}</span>
-                                    {p.qtd_confirmar && <span className="caixa-alerta" />}
-                                  </button>
-                                )
-                              })}
+                                })}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                    </div>
+                          ))}
+                      </div>
+                    )}
                   </div>
                   <div className="rack-prateleira" aria-hidden />
                 </div>

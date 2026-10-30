@@ -7,7 +7,20 @@ export interface LinhaInventario {
   Peça: string
   Código: string
   Quantidade: string
+  'Preço de custo': string
+  'Valor total': string
 }
+
+const CAB = [
+  'Estrutura',
+  'Endereço',
+  'Máquina',
+  'Peça',
+  'Código',
+  'Quantidade',
+  'Preço de custo',
+  'Valor total',
+]
 
 const esc = (v: string) => {
   const t = (v ?? '').toString()
@@ -16,11 +29,10 @@ const esc = (v: string) => {
 
 /** Junta as linhas (cada uma um objeto com as colunas na ordem) em CSV Excel-BR. */
 export function montarCsv(linhas: LinhaInventario[]): string {
-  const cab = ['Estrutura', 'Endereço', 'Máquina', 'Peça', 'Código', 'Quantidade']
   const corpo = linhas.map((l) =>
-    cab.map((c) => esc(l[c as keyof LinhaInventario] ?? '')).join(';'),
+    CAB.map((c) => esc(l[c as keyof LinhaInventario] ?? '')).join(';'),
   )
-  return `\uFEFF${cab.join(';')}\r\n${corpo.join('\r\n')}\r\n`
+  return `\uFEFF${CAB.join(';')}\r\n${corpo.join('\r\n')}\r\n`
 }
 
 /** Cria um Blob CSV e dispara o download no navegador. */

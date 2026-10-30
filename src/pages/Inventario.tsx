@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
-import { Download, Loader2, PackageSearch, Search } from 'lucide-react'
+import { Banknote, Download, Loader2, PackageSearch, Search } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useInventario } from '@/hooks/use-inventario'
 import { baixarCsv } from '@/lib/export-csv'
+import { precoTexto } from '@/types/estoque'
 import HistoricoMensal from '@/components/HistoricoMensal'
 
 export default function Inventario() {
-  const { grupos, filtrar, total, totalQuantidade, snapshot, carregando } = useInventario()
+  const { grupos, filtrar, total, totalQuantidade, totalValores, snapshot, carregando } =
+    useInventario()
   const { toast } = useToast()
   const [busca, setBusca] = useState('')
   const [exportando, setExportando] = useState(false)
@@ -26,7 +28,16 @@ export default function Inventario() {
             Máquina: g.maquina,
             Peça: i.peca,
             Código: i.codigo,
-            Quantidade: i.quantidade && i.quantidade > 0 ? String(i.quantidade) : 'a confirmar',
+            Quantidade:
+              i.quantidade && i.quantidade > 0 && !i.qtdConfirmar
+                ? String(i.quantidade)
+                : 'a confirmar',
+            'Preço de custo':
+              i.precoCusto != null ? i.precoCusto.toFixed(2).replace('.', ',') : '—',
+            'Valor total':
+              i.precoCusto != null && i.quantidade && i.quantidade > 0 && !i.qtdConfirmar
+                ? (i.quantidade * i.precoCusto).toFixed(2).replace('.', ',')
+                : '—',
           })),
         ),
       )
@@ -57,6 +68,16 @@ export default function Inventario() {
         </button>
       </header>
 
+      {totalValores > 0 && (
+        <section className="inv-total-hero">
+          <Banknote />
+          <div>
+            <small>Preço total em estoque</small>
+            <strong>{precoTexto(totalValores)}</strong>
+          </div>
+        </section>
+      )}
+
       <section className="filters">
         <label className="search-box">
           <Search />
@@ -83,7 +104,8 @@ export default function Inventario() {
               <header className="inv-grupo-header">
                 <h2>{g.maquina}</h2>
                 <span className="inv-grupo-stats">
-                  {g.totalItens} item(ns) · {g.somaQuantidades} un.
+                  {g.totalItens} item(ns) · {g.somaQuantidades} un. ·{' '}
+                  {g.somaValores > 0 ? precoTexto(g.somaValores) : '—'}
                 </span>
               </header>
               <div className="inv-tabela-wrap">
@@ -95,20 +117,29 @@ export default function Inventario() {
                       <th>Peça</th>
                       <th>Código</th>
                       <th className="num">Qtd.</th>
+                      <th className="num">Preço de custo</th>
+                      <th className="num">Valor total</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {g.itens.map((i) => (
-                      <tr key={i.id}>
-                        <td>{i.estrutura}</td>
-                        <td>{i.endereco}</td>
-                        <td>{i.peca}</td>
-                        <td>{i.codigo}</td>
-                        <td className="num">
-                          {i.qtdConfirmar || !i.quantidade ? 'a confirmar' : i.quantidade}
-                        </td>
-                      </tr>
-                    ))}
+                    {g.itens.map((i) => {
+                      const qtdOk = Boolean(i.quantidade && i.quantidade > 0 && !i.qtdConfirmar)
+                      return (
+                        <tr key={i.id}>
+                          <td>{i.estrutura}</td>
+                          <td>{i.endereco}</td>
+                          <td>{i.peca}</td>
+                          <td>{i.codigo}</td>
+                          <td className="num">{qtdOk ? i.quantidade : 'a confirmar'}</td>
+                          <td className="num">{precoTexto(i.precoCusto)}</td>
+                          <td className="num">
+                            {qtdOk && i.precoCusto != null
+                              ? precoTexto(i.quantidade! * i.precoCusto)
+                              : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

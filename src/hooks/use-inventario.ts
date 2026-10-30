@@ -1,12 +1,20 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useEstoque } from '@/contexts/EstoqueContext'
-import type { GrupoInventario, ItemInventario } from '@/types/estoque'
+import type { GrupoInventario, ItemInventario, SnapshotInventario } from '@/types/estoque'
 import type { LinhaInventario } from '@/lib/export-csv'
 
 /** Máquina de exibição para itens sem máquina digitada. */
 export const SEM_MAQUINA = 'Sem máquina'
 
 const rotuloMaquina = (m: string) => (m.trim() ? m.trim() : SEM_MAQUINA)
+
+const qtdDe = (i: ItemInventario) =>
+  !i.qtdConfirmar && i.quantidade && i.quantidade > 0 ? i.quantidade : 0
+
+const valorDe = (i: ItemInventario) => (i.precoCusto != null ? qtdDe(i) * i.precoCusto : 0)
+
+const precoCsv = (p: number | null) => (p == null ? '—' : p.toFixed(2).replace('.', ','))
+const valorCsv = (v: number) => (v ? v.toFixed(2).replace('.', ',') : '—')
 
 /** Linhas planas na ordem dos grupos — base do CSV e da lista. */
 export function linhasInventario(
@@ -19,28 +27,30 @@ export function linhasInventario(
       Máquina: rotuloMaquina(i.maquina),
       Peça: i.peca,
       Código: i.codigo,
-      Quantidade: i.quantidade && i.quantidade > 0 ? String(i.quantidade) : 'a confirmar',
+      Quantidade:
+        i.quantidade && i.quantidade > 0 && !i.qtdConfirmar ? String(i.quantidade) : 'a confirmar',
+      'Preço de custo': precoCsv(i.precoCusto),
+      'Valor total': valorCsv(valorDe(i)),
     },
     maquina: rotuloMaquina(i.maquina),
   }))
 }
 
-/** Agrupa os itens por modelo de máquina (valor exato digitado), com contagens. */
-export function agruparPorMaquina(
-  itens: (ItemInventario & { qtdConfirmar: boolean })[],
-): GrupoInventario[] {
+/** Agrupa os itens por modelo de máquina (valor exato digitado), com contagens e valores. */
+export function agruparPorMaquina(itens: ItemInventario[]): GrupoInventario[] {
   const ordem: string[] = []
   const grupos = new Map<string, GrupoInventario>()
   for (const i of itens) {
     const chave = rotuloMaquina(i.maquina)
     let g = grupos.get(chave)
     if (!g) {
-      g = { maquina: chave, totalItens: 0, somaQuantidades: 0, itens: [] }
+      g = { maquina: chave, totalItens: 0, somaQuantidades: 0, somaValores: 0, itens: [] }
       grupos.set(chave, g)
       ordem.push(chave)
     }
     g.totalItens += 1
-    if (!i.qtdConfirmar && i.quantidade && i.quantidade > 0) g.somaQuantidades += i.quantidade
+    g.somaQuantidades += qtdDe(i)
+    g.somaValores += valorDe(i)
     g.itens.push({ ...i })
   }
   return ordem.map((k) => grupos.get(k)!) as GrupoInventario[]
@@ -69,6 +79,7 @@ export function useInventario() {
           codigo: i.codigo,
           quantidade: i.quantidade,
           qtdConfirmar: i.qtd_confirmar,
+          precoCusto: i.preco_custo ?? null,
         }
       }),
     [itens, posicoes, estruturasPorId],
@@ -78,11 +89,12 @@ export function useInventario() {
 
   const total = itensInventario.length
   const totalQuantidade = useMemo(
-    () =>
-      itensInventario.reduce(
-        (s, i) => s + (!i.qtdConfirmar && i.quantidade && i.quantidade > 0 ? i.quantidade : 0),
-        0,
-      ),
+    () => itensInventario.reduce((s, i) => s + qtdDe(i), 0),
+    [itensInventario],
+  )
+  /** Preço total em estoque: soma de quantidade × preço de custo de todos os itens. */
+  const totalValores = useMemo(
+    () => itensInventario.reduce((s, i) => s + valorDe(i), 0),
     [itensInventario],
   )
 
@@ -97,15 +109,12 @@ export function useInventario() {
             `${i.peca} ${i.codigo} ${i.maquina}`.toLocaleLowerCase('pt-BR').includes(t),
           )
           if (itensFiltrados.length === 0) return null
-          const soma = itensFiltrados.reduce(
-            (s, i) => s + (!i.qtdConfirmar && i.quantidade && i.quantidade > 0 ? i.quantidade : 0),
-            0,
-          )
           return {
             ...g,
             itens: itensFiltrados,
             totalItens: itensFiltrados.length,
-            somaQuantidades: soma,
+            somaQuantidades: itensFiltrados.reduce((s, i) => s + qtdDe(i), 0),
+            somaValores: itensFiltrados.reduce((s, i) => s + valorDe(i), 0),
           }
         })
         .filter((g): g is GrupoInventario => g !== null)
@@ -115,15 +124,17 @@ export function useInventario() {
 
   /** Snapshot agregado para gravar no histórico mensal. */
   const snapshot = useCallback(
-    (): import('@/types/estoque').SnapshotInventario => ({
+    (): SnapshotInventario => ({
       total,
       totalQuantidade,
+      totalValores,
       grupos: grupos.map((g) => ({
         maquina: g.maquina,
         totalItens: g.totalItens,
         somaQuantidades: g.somaQuantidades,
+        somaValores: g.somaValores,
         itens: g.itens.map(
-          ({ id, estrutura, endereco, maquina, peca, codigo, quantidade, qtdConfirmar }) => ({
+          ({
             id,
             estrutura,
             endereco,
@@ -132,11 +143,22 @@ export function useInventario() {
             codigo,
             quantidade,
             qtdConfirmar,
+            precoCusto,
+          }) => ({
+            id,
+            estrutura,
+            endereco,
+            maquina,
+            peca,
+            codigo,
+            quantidade,
+            qtdConfirmar,
+            precoCusto,
           }),
         ),
       })),
     }),
-    [total, totalQuantidade, grupos],
+    [total, totalQuantidade, totalValores, grupos],
   )
 
   const quedasRecentes = useMemo(
@@ -149,6 +171,7 @@ export function useInventario() {
     filtrar,
     total,
     totalQuantidade,
+    totalValores,
     snapshot,
     gerando,
     setGerando,

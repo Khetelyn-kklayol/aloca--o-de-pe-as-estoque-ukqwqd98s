@@ -9,6 +9,7 @@ export interface ItemInput {
   codigo: string
   quantidade: number | null
   qtd_confirmar: boolean
+  preco_custo: number | null
 }
 
 export const criarItem = (posicaoId: string, data: ItemInput) =>
@@ -31,6 +32,69 @@ export const aplicaGravidade = (codigoEstrutura: string) =>
 /** Endereço da posição no mesmo lado, um nível abaixo. Ex.: PG1-N3-B4 → PG1-N2-B4. */
 export const enderecoNivelAbaixo = (endereco: string) =>
   endereco.replace(/-N(\d+)-/, (_, n: string) => `-N${Number(n) - 1}-`)
+
+/**
+ * Preço de custo conhecido de uma peça: é atributo da PEÇA (mesma peça/código =
+ * mesmo preço em todo o estoque). Procura primeiro pelo código exato; sem
+ * código, pelo nome exato; usa o preço do registro mais recente encontrado.
+ */
+export function precoConhecido(itens: Item[], peca: string, codigo: string): number | null {
+  const nome = peca.trim().toLocaleLowerCase('pt-BR')
+  const cod = codigo.trim().toLocaleLowerCase('pt-BR')
+  if (!nome && !cod) return null
+  const candidatos = itens
+    .filter((i) => i.preco_custo != null)
+    .filter((i) =>
+      cod
+        ? (i.codigo || '').trim().toLocaleLowerCase('pt-BR') === cod
+        : i.peca.trim().toLocaleLowerCase('pt-BR') === nome,
+    )
+    .sort((a, b) => (a.updated < b.updated ? 1 : -1))
+  return candidatos[0]?.preco_custo ?? null
+}
+
+/** Quantos itens distintos da mesma peça já têm preço cadastrado. */
+const itensMesmaPeca = (itens: Item[], peca: string, codigo: string) => {
+  const nome = peca.trim().toLocaleLowerCase('pt-BR')
+  const cod = codigo.trim().toLocaleLowerCase('pt-BR')
+  return itens.filter(
+    (i) =>
+      (cod
+        ? (i.codigo || '').trim().toLocaleLowerCase('pt-BR') === cod
+        : i.peca.trim().toLocaleLowerCase('pt-BR') === nome) && i.preco_custo != null,
+  )
+}
+
+/**
+ * Propaga o preço da peça aos demais itens da MESMA peça (mesmo código; sem
+ * código, mesmo nome exato) e registra a alteração no histórico. Nada é feito
+ * quando o preço ficou vazio ou não mudou.
+ */
+export async function propagarPreco(dados: ItemInput, idAlterado?: string) {
+  const preco = dados.preco_custo
+  if (preco == null) return 0
+  const todos = await pb.collection<Item>('itens').getFullList({ sort: 'updated' })
+  const anteriores = itensMesmaPeca(todos, dados.peca, dados.codigo)
+  const atual = anteriores.find((i) => i.id === idAlterado)
+  const precoAnterior = atual?.preco_custo ?? anteriores[0]?.preco_custo ?? null
+  if (anteriores.length && precoAnterior != null && precoAnterior === preco) return 0
+
+  const alvo = anteriores.filter((i) => i.id !== idAlterado)
+  for (const i of alvo) {
+    await pb.collection<Item>('itens').update(i.id, { preco_custo: preco })
+  }
+  await registrarMovimentacao({
+    tipo: 'edicao',
+    peca: dados.peca,
+    codigo: dados.codigo,
+    quantidade: dados.quantidade,
+    observacao: `Preço de custo atualizado para ${preco.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    })} — ${alvo.length + (idAlterado ? 1 : 0)} item(ns) da mesma peça`,
+  })
+  return alvo.length
+}
 
 /** Recalcula categoria e o ponto de "qtd a confirmar" de uma posição após cada alteração. */
 export async function sincronizarPosicao(posicao: Posicao, itensRestantes: Item[]) {

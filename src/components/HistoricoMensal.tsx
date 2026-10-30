@@ -11,7 +11,7 @@ import { useEstoque } from '@/contexts/EstoqueContext'
 import { linhasInventario, useInventario } from '@/hooks/use-inventario'
 import { baixarCsv, type LinhaInventario } from '@/lib/export-csv'
 import { listarInventarios, registrarInventarioDoMes } from '@/services/inventarios'
-import type { Inventario } from '@/types/estoque'
+import { precoTexto, type Inventario } from '@/types/estoque'
 
 const nomeMes = (mes: string) => {
   const [ano, m] = mes.split('-').map(Number)
@@ -87,7 +87,11 @@ export default function HistoricoMensal() {
                 <span className="inv-mes-trigger">
                   <strong>{nomeMes(inv.mes)}</strong>
                   <small>
-                    {inv.total} peça(s) · {inv.snapshot?.grupos?.length || 0} máquina(s)
+                    {inv.total} peça(s) · {inv.snapshot?.grupos?.length || 0} máquina(s) · Valor
+                    total:{' '}
+                    {inv.snapshot?.totalValores != null
+                      ? precoTexto(inv.snapshot.totalValores)
+                      : '—'}
                   </small>
                 </span>
               </AccordionTrigger>
@@ -98,6 +102,7 @@ export default function HistoricoMensal() {
                       <strong>{g.maquina}</strong>
                       <span>
                         {g.totalItens} item(ns) · {g.somaQuantidades} un.
+                        {g.somaValores ? ` · ${precoTexto(g.somaValores)}` : ''}
                       </span>
                     </div>
                   ))}

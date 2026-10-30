@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-30T00:43:58.524Z",
+  "generatedAt": "2026-10-30T01:07:43.634Z",
   "collections": [
     {
       "name": "users",
@@ -334,6 +334,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "preco_custo",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

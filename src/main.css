@@ -1901,3 +1901,140 @@ p {
     padding: 9px 12px;
   }
 }
+
+/* ===== Níveis porta-palete em grades 3×3 (formato do estoque físico) ===== */
+.grade-lados {
+  display: flex;
+  gap: 26px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.grade-lado {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.grade-celulas {
+  display: grid;
+  grid-template-columns: repeat(3, 46px);
+  gap: 3px;
+  padding: 3px;
+  border-radius: 8px;
+  border: 1.5px solid;
+}
+.grade-lado-caption {
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+}
+.grade-vazia-baixo,
+.grade-vazia-cima,
+.grade-vazia-meio {
+  border-color: rgba(28, 27, 24, 0.14);
+}
+.grade-vazia-baixo {
+  background: #fdf3d9;
+}
+.grade-vazia-cima {
+  background: #e6f1e2;
+}
+.grade-vazia-meio {
+  background: #f0efeb;
+}
+.grade-celula {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #4a4a44;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.grade-vazia-baixo,
+.grade-vazia-cima,
+.grade-vazia-meio {
+  position: relative;
+}
+.grade-celula:hover {
+  transform: translateY(-1px);
+}
+.grade-caixa {
+  position: relative;
+  overflow: hidden;
+  color: #3f3a24;
+  box-shadow: 0 2px 0 rgba(28, 27, 24, 0.14);
+}
+.grade-caixa .caixa-topo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.42);
+  border-bottom: 1px solid rgba(28, 27, 24, 0.1);
+}
+.grade-caixa-baixo {
+  background: linear-gradient(180deg, #f7df9d 0%, #eec964 100%);
+  border-color: #dcb84e;
+}
+.grade-caixa-cima {
+  background: linear-gradient(180deg, #c2ddb2 0%, #9cc687 100%);
+  border-color: #83b06e;
+}
+.grade-caixa-meio {
+  background: linear-gradient(180deg, #e4e2da 0%, #cfccc1 100%);
+  border-color: #b3afa2;
+}
+.grade-celula.matched {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.18);
+}
+.grade-celula.dimmed {
+  opacity: 0.22;
+}
+.grade-celula .caixa-alerta {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d4af37;
+}
+
+/* ===== Destaque do preço total em estoque (Inventário) ===== */
+.inv-total-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #1c1b18 0%, #2e2a20 100%);
+  color: #f7f3ea;
+  border-radius: 14px;
+  padding: 16px 22px;
+  margin-bottom: 22px;
+  box-shadow: 0 8px 24px rgba(28, 27, 24, 0.22);
+}
+.inv-total-hero svg {
+  width: 26px;
+  height: 26px;
+  color: var(--gold);
+}
+.inv-total-hero small {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #cbb98a;
+}
+.inv-total-hero strong {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}

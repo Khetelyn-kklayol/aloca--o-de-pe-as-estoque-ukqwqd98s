@@ -33,6 +33,7 @@ export interface Item extends RecordModel {
   codigo: string
   quantidade: number | null
   qtd_confirmar: boolean
+  preco_custo: number | null
   created: string
   updated: string
 }
@@ -50,13 +51,6 @@ export interface Movimentacao extends RecordModel {
   created: string
 }
 
-export interface GrupoInventario {
-  maquina: string
-  totalItens: number
-  somaQuantidades: number
-  itens: ItemInventario[]
-}
-
 export interface ItemInventario {
   id: string
   estrutura: string
@@ -66,11 +60,22 @@ export interface ItemInventario {
   codigo: string
   quantidade: number | null
   qtdConfirmar: boolean
+  precoCusto: number | null
+}
+
+export interface GrupoInventario {
+  maquina: string
+  totalItens: number
+  somaQuantidades: number
+  somaValores: number
+  itens: ItemInventario[]
 }
 
 export interface SnapshotInventario {
   total: number
   totalQuantidade: number
+  /** Preço total em estoque no momento do snapshot (soma geral). */
+  totalValores: number
   grupos: GrupoInventario[]
 }
 
@@ -98,3 +103,7 @@ export const ladosDaEstrutura = (e: Estrutura): string[] => {
 /** Item com quantidade nula/0 exibe "a confirmar". */
 export const qtdTexto = (item: Pick<Item, 'quantidade' | 'qtd_confirmar'>) =>
   item.qtd_confirmar || !item.quantidade ? 'a confirmar' : String(item.quantidade)
+
+/** Formata um valor em reais (pt-BR); null/undefined → "—". */
+export const precoTexto = (valor: number | null | undefined) =>
+  valor == null ? '—' : valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
